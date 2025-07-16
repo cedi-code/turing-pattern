@@ -16,6 +16,8 @@ firefox localhost:8000
 ```
 
 ## Credits
-I got inspired by the youtube video : [Turing's Cake (and other wrinkly math)](https://youtu.be/icQ_BTtNGEo?si=TQnkHpEK2IJoVT0L)
+I got inspired by the youtube video : [Turing's Cake (and other wrinkly math)](https://youtu.be/icQ_BTtNGEo?si=TQnkHpEK2IJoVT0L) by 
+Physics for the Birds
 
-<iframe width="560" height="315" src="https://www.youtube.com/embed/icQ_BTtNGEo?si=oTE9qW2FjMSS9vzm" title="YouTube video player" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+[![Video Title](https://img.youtube.com/vi/icQ_BTtNGEo/0.jpg)](https://www.youtube.com/watch?v=icQ_BTtNGEo)
