@@ -21,3 +21,5 @@ Physics for the Birds
 
 
 [![Video Title](https://img.youtube.com/vi/icQ_BTtNGEo/0.jpg)](https://www.youtube.com/watch?v=icQ_BTtNGEo)
+
+and the website [Reaction-Diffusion Tutorial by Karl Sims](https://www.karlsims.com/rd.html) helped a lot!

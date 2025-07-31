@@ -2,8 +2,41 @@ export { primitives };
 const primitives = {
     createCube,
     createSphere,
-    createTruncatedCone
+    createTruncatedCone,
+    createOctagon,
 };
+function createOctagon(size = 1) {
+    const s = size / 2;
+    const s2 = s / 3;
+    const positions = [
+        -s, -s, 0, // 0
+        s, -s, 0, // 1
+        s, s, 0, // 2
+        -s, s, 0, // 3
+        -(s + s2), 0, 0, // 4
+        s + s2, 0, 0, // 5
+        0, -(s + s2), 0, // 6
+        0, s + s2, 0, // 7
+    ];
+    const indices = [
+        0, 1, 2, 0, 2, 3, // Front
+        0, 6, 4, // bottom-left triangle
+        0, 1, 6, // bottom triangle  
+        1, 5, 6, // bottom-right triangle
+        1, 2, 5, // right triangle
+        2, 7, 5, // top-right triangle
+        2, 3, 7, // top triangle
+        3, 4, 7, // top-left triangle
+        3, 0, 4 // left triangle
+    ];
+    return {
+        a_position: {
+            dataArray: positions,
+            numComponents: 3
+        },
+        indices: indices
+    };
+}
 // Cube geometry
 function createCube(size = 1, withIndicies = true) {
     const s = size / 2;
