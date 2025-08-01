@@ -10,12 +10,12 @@ void main() {
 
     vec4 texValue = texture2D(u_texture,v_texCoord);
 
-    float greenFac = ceil(texValue.g-0.3);
-    float blueFac = ceil(texValue.b-0.3);
+    float greenFac = smoothstep(0.4,0.6,texValue.g);
+    float blueFac = smoothstep(0.1,0.9,texValue.b);
 
     gl_FragColor = texValue;
     // gl_FragColor =  vec4(0.71, 0.2, 0.52, 1.0) * texValue.b + vec4(0.51, 0.0, 0.71, 1.0) * texValue.g;
 
-    // gl_FragColor = vec4(0.0,greenFac, blueFac, 1.0);
+    gl_FragColor = vec4(1.0,greenFac, 1.0-blueFac, 1.0);
 
 }

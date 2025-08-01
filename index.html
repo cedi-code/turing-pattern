@@ -1,11 +1,21 @@
 <!DOCTYPE html>
 <head>
 <title>turing pattern</title>
-
+<style>
+	html, body {
+		height: 100%;
+		margin: 0;
+	}
+	#my_canvas {
+		width: 100vw;
+		height: 100vh;
+		display: block;
+	}
+</style>
 </head>
 <body>
 
-<canvas width="1080" height="720" id="my_canvas"></canvas>
+<canvas width="720" height="720" id="my_canvas"></canvas>
 
 <br>
 <button id="start-btn">start</button>
@@ -28,8 +38,11 @@
 <p>delta T</p>
 <input type="number" value="1.0" id="delta-t">
 
+<p>invert input</p>
+<input type="checkbox" id="invert-check">
+
 <p>speed:</p>
-<input type="range" min="0" max="30" id="speed-slider"/>
+<input type="range" min="1" max="40" value="10" id="speed-slider"/>
 
 <script  type="module" src="turingpattern.js"></script>
 </body>

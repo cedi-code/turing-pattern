@@ -8,6 +8,7 @@ const inputArate = document.getElementById('A-rate');
 const inputBrate = document.getElementById('B-rate');
 const inputFeedrate = document.getElementById('feed-rate');
 const inputKillrate = document.getElementById('kill-rate');
+const inputInvert = document.getElementById('invert-check');
 const inputDeltaT = document.getElementById('delta-t');
 const canvas = document.getElementById('my_canvas');
 const gl = canvas?.getContext('webgl');
@@ -39,10 +40,10 @@ const pixelAmount = gl.canvas.width / pixelSize;
 // ==== set up data
 const octagonData = {
     a_position: { dataArray: [
-            -3, -3, 0, // bottom left
-            3, -3, 0, // bottom right
-            -3, 3, 0, // top left
-            3, 3, 0 // top right
+            -4, -4, 0, // bottom left
+            4, -4, 0, // bottom right
+            -4, 4, 0, // top left
+            4, 4, 0 // top right
         ],
         numComponents: 3 },
     a_texCoord: { dataArray: [0, 0, 1, 0, 0, 1, 1, 1], numComponents: 2 },
@@ -60,6 +61,9 @@ const planeData = {
     a_texCoord: { dataArray: [0, 0, 1, 0, 0, 1, 1, 1], numComponents: 2 },
     indices: [0, 1, 2, 2, 1, 3],
 };
+let projectionMatrix = myMath.identity(4);
+resizeCanvasToDisplaySize(gl.canvas);
+console.log("canvas:" + gl.canvas.width + "," + gl.canvas.height);
 const bufferInfoOctagon = myWebglUtils.createBufferInfoFromArrays(gl, octagonData);
 const bufferInfoPlane = myWebglUtils.createBufferInfoFromArrays(gl, planeData); // this binds indicies!
 const left = 0;
@@ -68,41 +72,15 @@ const bottom = gl.canvas.height; // gl.canvas.height is 'bottom' to invert Y-axi
 const top = 0;
 const near = 100;
 const far = -100;
-let projectionMatrix = myMath.ortographic(left, right, bottom, top, near, far);
+projectionMatrix = myMath.ortographic(left, right, bottom, top, near, far);
 let viewMatrix = myMath.identity(4);
 // == Create a texture to render to==
-const targetTextureWidth = gl.canvas.width;
-const targetTextureHeight = gl.canvas.height;
+let targetTextureWidth = gl.canvas.width / 4;
+let targetTextureHeight = gl.canvas.height / 4;
 const textureA = gl.createTexture();
-gl.bindTexture(gl.TEXTURE_2D, textureA);
-{
-    const level = 0;
-    const internalFormat = gl.RGBA;
-    const border = 0;
-    const format = gl.RGBA;
-    const type = gl.UNSIGNED_BYTE;
-    const data = null;
-    gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, targetTextureWidth, targetTextureHeight, border, format, type, data);
-    // set becaue we dont hav emips and its not filterd?
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-}
+setTextureProps(textureA);
 const textureB = gl.createTexture();
-gl.bindTexture(gl.TEXTURE_2D, textureB);
-{
-    const level = 0;
-    const internalFormat = gl.RGBA;
-    const border = 0;
-    const format = gl.RGBA;
-    const type = gl.UNSIGNED_BYTE;
-    const data = null;
-    gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, targetTextureWidth, targetTextureHeight, border, format, type, data);
-    // set becaue we dont hav emips and its not filterd?
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-}
+setTextureProps(textureB);
 // == ==
 // // ==  create frame buffers and bind them ==
 const fb = gl.createFramebuffer();
@@ -111,23 +89,17 @@ gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
 const attachmentPoint = gl.COLOR_ATTACHMENT0;
 gl.framebufferTexture2D(gl.FRAMEBUFFER, attachmentPoint, gl.TEXTURE_2D, textureA, 0);
 const depthBuffer = gl.createRenderbuffer();
-gl.bindRenderbuffer(gl.RENDERBUFFER, depthBuffer);
-// make a dpeth buffer and the same size as targetTexture
-gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, targetTextureWidth, targetTextureHeight);
-gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthBuffer);
+setDepthBufferProps(depthBuffer, fb);
 const fb2 = gl.createFramebuffer();
 gl.bindFramebuffer(gl.FRAMEBUFFER, fb2);
 // attach the texture as first color attachment
 gl.framebufferTexture2D(gl.FRAMEBUFFER, attachmentPoint, gl.TEXTURE_2D, textureB, 0);
 const depthBuffer2 = gl.createRenderbuffer();
-gl.bindRenderbuffer(gl.RENDERBUFFER, depthBuffer2);
-// make a dpeth buffer and the same size as targetTexture
-gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, targetTextureWidth, targetTextureHeight);
-gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depthBuffer2);
+setDepthBufferProps(depthBuffer2, fb2);
 // ====
 let targetTexture = textureA;
 let isTextureB = false;
-let worldM = myMath.translation(gl.canvas.width / 2.0, gl.canvas.height / 2.0, 0); //myMath.identity(4);
+let worldM = myMath.identity(4); //myMath.translation(gl.canvas.width/2.0,gl.canvas.height/2.0,0); //myMath.identity(4);
 const octagonUniforms = {
     u_projection: projectionMatrix,
     u_view: viewMatrix,
@@ -156,8 +128,7 @@ const planeUniforms = {
 sliderSpeed.oninput = (event) => {
     const target = event.target;
     const value = parseInt(target.value);
-    simSpeed = value;
-    simSpeedT = simSpeed * 100;
+    simSteps = value;
 };
 inputArate.oninput = (event) => {
     const target = event.target;
@@ -189,6 +160,10 @@ inputDeltaT.oninput = (event) => {
     planeUniforms.u_t = value;
     console.log("set delta T:" + value);
 };
+inputInvert.oninput = (event) => {
+    octagonUniforms.u_color = !inputInvert.checked ? [0, 0, 1, 1] : [0, 1, 0, 1];
+    worldM = !inputInvert.checked ? myMath.identity(4) : myMath.scaling(10, 10, 10);
+};
 btnReset.onclick = (event) => {
     resetCanvasAndTexture();
     runningSim = false;
@@ -204,41 +179,34 @@ btnPause.onclick = (event) => {
 };
 resetCanvasAndTexture();
 let prevT = 0;
-let simSpeed = 10;
-let simSpeedT = simSpeed * 100;
+let simSteps = 10;
 let runningSim = false;
 let doSimStep = false;
 function drawScene(time) {
-    // Setting the difference between timestamp 
-    // and the set start point as our progress
     let deltaT = (time - prevT) / 10.0;
-    // console.log(deltaT);
     prevT = time;
     gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
     gl.disable(gl.DEPTH_TEST);
-    // gl.enable(gl.CULL_FACE);
-    const currentDestFB = isTextureB ? fb : fb2;
-    const currentSourceTexture = isTextureB ? textureB : textureA;
-    // render to our targetTexture by binding frame buffer
-    gl.bindFramebuffer(gl.FRAMEBUFFER, currentDestFB);
-    // tell webgl how to convert from clip space to pixels
-    gl.viewport(0, 0, targetTextureWidth, targetTextureHeight);
-    // clear the attachments
-    // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    if (isMouseDown) {
-        console.log("inital draw call");
-        octagonUniforms.u_color = [0, 0, 1, 1];
-        // octagonUniforms.u_world = myMath.multiply(worldM, myMath.scaling(1,1,1));
-        draw(programPre, attributeSetterPre, uniformSetterPre, bufferInfoOctagon, octagonUniforms); // <- draw square on texture
-        octagonUniforms.u_color = [0, 1, 0, 1];
-        // octagonUniforms.u_world = myMath.multiply(worldM, myMath.scaling(0.9,0.9,1));
-        // draw(programPre,attributeSetterPre,uniformSetterPre,bufferInfoOctagon,octagonUniforms); // <- draw square on texture
-    }
-    // add the blurr to the texture too!
-    planeUniforms.u_texture = currentSourceTexture;
-    // planeUniforms.u_t = deltaT;
-    if (time !== 0 && !isMouseDown) {
-        draw(programPostAction, attributeSetterPostAction, uniformSetterPostAction, bufferInfoPlane, planeUniforms); // <- draws texture
+    for (let i = 0; i < simSteps; ++i) {
+        const currentDestFB = isTextureB ? fb : fb2;
+        const currentSourceTexture = isTextureB ? textureB : textureA;
+        // render to our targetTexture by binding frame buffer
+        gl.bindFramebuffer(gl.FRAMEBUFFER, currentDestFB);
+        // tell webgl how to convert from clip space to pixels
+        gl.viewport(0, 0, targetTextureWidth, targetTextureHeight);
+        // clear the attachments
+        // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        // add the blurr to the texture too!
+        planeUniforms.u_texture = currentSourceTexture;
+        // planeUniforms.u_t = deltaT;
+        if (time !== 0) {
+            draw(programPostAction, attributeSetterPostAction, uniformSetterPostAction, bufferInfoPlane, planeUniforms); // <- draws texture
+        }
+        if (isMouseDown) {
+            console.log("inital draw call");
+            draw(programPre, attributeSetterPre, uniformSetterPre, bufferInfoOctagon, octagonUniforms); // <- draw square on texture
+        }
+        isTextureB = !isTextureB; // flip 
     }
     // render to canvas
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
@@ -248,9 +216,8 @@ function drawScene(time) {
     // clear canvas and reset buffers
     // gl.clearColor(1,0,0,1);
     // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    planeUniforms.u_texture = (currentDestFB === fb) ? textureA : textureB; // displays the thing we just renderd too
+    planeUniforms.u_texture = (isTextureB) ? textureA : textureB; // displays the thing we just renderd too
     draw(programPost, attributeSetterPost, uniformSetterPost, bufferInfoPlane, planeUniforms); // <- draws texture
-    isTextureB = !isTextureB; // flip 
     requestAnimationFrame(drawScene);
 }
 function draw(program, attribSetter, uniSetter, buffer, uniforms) {
@@ -276,18 +243,43 @@ document.addEventListener('mousemove', function (e) {
 let xRelativ = 0;
 let yRelativ = 0;
 function handleMouseClick(event) {
-    xRelativ = event.pageX;
-    yRelativ = event.pageY;
-    if (xRelativ > gl.canvas.width || yRelativ > gl.canvas.height) {
+    // const rect = gl.canvas. // Get canvas position and size on screen
+    const dpr = window.devicePixelRatio || 1; // Get device pixel ratio
+    // Calculate mouse coordinates relative to the canvas's top-left corner (CSS pixels)
+    let xDisplayRelativ = event.pageX;
+    let yDisplayRelativ = event.pageY;
+    // Convert to drawing buffer coordinates (device pixels)
+    let xDrawingRelativ = xDisplayRelativ * dpr;
+    let yDrawingRelativ = yDisplayRelativ * dpr;
+    // Optional: Add bounds check if you don't want clicks outside the drawing area
+    if (xDrawingRelativ < 0 || xDrawingRelativ > gl.canvas.width ||
+        yDrawingRelativ < 0 || yDrawingRelativ > gl.canvas.height) {
         return;
     }
-    xRelativ -= gl.canvas.width / 2;
-    yRelativ -= gl.canvas.height / 2;
-    let xPixel = Math.round(xRelativ * pixelAmount);
-    let yPixel = Math.round(yRelativ * pixelAmount);
-    octagonUniforms.u_world = myMath.multiply(myMath.translation(xRelativ, yRelativ, 0.0), worldM);
+    octagonUniforms.u_world = myMath.multiply(myMath.translation(xDrawingRelativ, yDrawingRelativ, 0.0), worldM);
     //octagonUniforms.u_color = [0,0,1,1];
     // draw(programPre,attributeSetterPre,uniformSetterPre,bufferInfoOctagon,octagonUniforms); // <- draw square on texture
+}
+function setTextureProps(texture) {
+    gl.bindTexture(gl.TEXTURE_2D, texture);
+    const level = 0;
+    const internalFormat = gl.RGBA;
+    const border = 0;
+    const format = gl.RGBA;
+    const type = gl.UNSIGNED_BYTE;
+    const data = null;
+    gl.texImage2D(gl.TEXTURE_2D, level, internalFormat, targetTextureWidth, targetTextureHeight, border, format, type, data);
+    // set becaue we dont hav emips and its not filterd?
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+}
+function setDepthBufferProps(dbuffer, fBuffer) {
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, dbuffer);
+    // make a dpeth buffer and the same size as targetTexture
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, targetTextureWidth, targetTextureHeight);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, dbuffer);
 }
 function resetCanvasAndTexture() {
     console.log("reset canvas");
@@ -301,7 +293,32 @@ function resetCanvasAndTexture() {
     gl.clearColor(0, 1, 0, 1);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 }
-function bindFramebufferAndSetViewport(fb, width, height) {
-    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
-    gl.viewport(0, 0, width, height);
+window.onresize = (event) => {
+    resizeCanvasToDisplaySize(gl.canvas);
+    targetTextureWidth = gl.canvas.width / 4.0;
+    targetTextureHeight = gl.canvas.height / 4.0;
+    setTextureProps(textureA);
+    setTextureProps(textureB);
+    setDepthBufferProps(depthBuffer, fb);
+    setDepthBufferProps(depthBuffer2, fb2);
+    planeUniforms.u_textureSize = [targetTextureWidth, targetTextureHeight];
+    worldM = myMath.identity(4);
+    octagonUniforms.u_world = worldM;
+    octagonUniforms.u_projection = projectionMatrix;
+    resetCanvasAndTexture();
+};
+function resizeCanvasToDisplaySize(canv) {
+    console.log("resize canvas!");
+    const dpr = window.devicePixelRatio;
+    const { width, height } = canv.getBoundingClientRect();
+    const displayWidth = Math.round(width * dpr);
+    const displayHeight = Math.round(height * dpr);
+    const resize = canv.width !== displayWidth || canv.height !== displayHeight;
+    if (resize) {
+        // resize
+        canv.width = displayWidth;
+        canv.height = displayHeight;
+        projectionMatrix = myMath.ortographic(0, canv.width, canv.height, 0, 100, -100);
+    }
+    return resize;
 }
