@@ -71,7 +71,7 @@ if (!programPostAction) {
 const uniformSetterPostAction = myWebglUtils.createUniformSetters(gl, programPostAction);
 const attributeSetterPostAction = myWebglUtils.createAttributeSetters(gl, programPostAction);
 const ratio = gl.canvas.width / gl.canvas.height;
-let isMouseDown = false;
+let isPointerDown = false;
 let isSettingsOpen = false;
 const pixelSize = 10;
 const pixelAmount = gl.canvas.width / pixelSize;
@@ -289,7 +289,7 @@ function drawScene(time) {
         if (time !== 0) {
             draw(programPostAction, attributeSetterPostAction, uniformSetterPostAction, bufferInfoPlane, planeUniforms); // <- draws texture
         }
-        if (isMouseDown) {
+        if (isPointerDown) {
             console.log("inital draw call");
             draw(programPre, attributeSetterPre, uniformSetterPre, bufferInfoOctagon, octagonUniforms); // <- draw square on texture
         }
@@ -315,26 +315,58 @@ function draw(program, attribSetter, uniSetter, buffer, uniforms) {
     myWebglUtils.drawBufferInfo(gl, buffer);
 }
 drawScene(0.0);
+function getEventPosition(e) {
+    if ("touches" in e && e.touches.length > 0) {
+        return {
+            x: e.touches[0].pageX,
+            y: e.touches[0].pageY
+        };
+    }
+    else {
+        return {
+            x: e.pageX,
+            y: e.pageY
+        };
+    }
+}
+function handlePointer(e) {
+    const pos = getEventPosition(e);
+    handleMouseClick([pos.x, pos.y]);
+}
+// Mouse events
 document.addEventListener('mousedown', function (e) {
-    isMouseDown = true;
-    handleMouseClick(e); // trigger immediately when pressed
+    isPointerDown = true;
+    handlePointer(e); // trigger immediately
 });
-document.addEventListener('mouseup', function (e) {
-    isMouseDown = false;
+document.addEventListener('mouseup', function () {
+    isPointerDown = false;
 });
 document.addEventListener('mousemove', function (e) {
-    if (isMouseDown) {
-        handleMouseClick(e); // continuously trigger while held
+    if (isPointerDown) {
+        handlePointer(e);
+    }
+});
+// Touch events
+document.addEventListener('touchstart', function (e) {
+    isPointerDown = true;
+    handlePointer(e);
+});
+document.addEventListener('touchend', function () {
+    isPointerDown = false;
+});
+document.addEventListener('touchmove', function (e) {
+    if (isPointerDown) {
+        handlePointer(e);
     }
 });
 let xRelativ = 0;
 let yRelativ = 0;
-function handleMouseClick(event) {
+function handleMouseClick(pos) {
     // const rect = gl.canvas. // Get canvas position and size on screen
     const dpr = window.devicePixelRatio || 1; // Get device pixel ratio
     // Calculate mouse coordinates relative to the canvas's top-left corner (CSS pixels)
-    let xDisplayRelativ = event.pageX;
-    let yDisplayRelativ = event.pageY;
+    let xDisplayRelativ = pos[0];
+    let yDisplayRelativ = pos[1];
     // Convert to drawing buffer coordinates (device pixels)
     let xDrawingRelativ = xDisplayRelativ * dpr;
     let yDrawingRelativ = yDisplayRelativ * dpr;

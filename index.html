@@ -131,6 +131,21 @@ option {
     color: white;
 }
 
+@media (max-width: 600px) {
+    input[type=range] {
+        height: 45px; /* even larger on small devices */
+    }
+
+    input[type=number] {
+        height: 50px;
+        font-size: clamp(18px, 5vw, 24px);
+    }
+
+    select {
+        padding: 14px 16px;
+    }
+}
+
 .side-items button:hover {
     background: var(--accent-color-hover);
 }
