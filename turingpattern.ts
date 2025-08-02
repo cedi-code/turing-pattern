@@ -3,10 +3,61 @@ import { Matrix4x4Flat, myMath, Vector3, Vector4, Matrix3x3Flat } from "./utils/
 import { primitives } from "./utils/myPrimitives.js";
 
 
+type RDparams = {
+    aRate: number,
+    bRate: number,
+    killRate: number,
+    feedRate: number,
+    deltaT: number
+}
+
+const PATTERNS : RDparams[] = [
+    {
+        aRate:1.0,
+        bRate:0.25,
+        killRate:0.065,
+        feedRate:0.08,
+        deltaT:1.0
+    },
+    {
+        aRate:1.0,
+        bRate:0.3,
+        killRate:0.065,
+        feedRate:0.07,
+        deltaT:0.78
+    },
+    {
+        aRate:1.0,
+        bRate:0.25,
+        killRate:0.058,
+        feedRate:0.015,
+        deltaT:1.0
+    },
+    {
+        aRate:1.0,
+        bRate:0.3,
+        killRate:0.045,
+        feedRate:0.149,
+        deltaT:1.0
+    }
+
+];
+
 const sliderSpeed = document.getElementById('speed-slider') as HTMLInputElement;
+const btnOpenSettings = document.getElementById('toggleBtn') as HTMLInputElement;
+const mainScreen = document.getElementById('my_canvas') as HTMLElement;
+const sideContainer = document.getElementById('sideContainer') as HTMLElement;
 const btnReset = document.getElementById('reset-btn') as HTMLButtonElement;
-const btnPause = document.getElementById('pause-btn') as HTMLButtonElement;
-const btnStart = document.getElementById('start-btn') as HTMLButtonElement;
+
+const dropboxParamPatterns = document.getElementById('patterns-select') as HTMLSelectElement;
+
+const colorPickerA = document.getElementById('color-A') as HTMLInputElement;
+const colorPickerB = document.getElementById('color-B') as HTMLInputElement;
+const colorPicker0 = document.getElementById('color-0') as HTMLInputElement;
+
+const sliderSharpA = document.getElementById('sharp-a-slider') as HTMLInputElement;
+const sliderSharpB = document.getElementById('sharp-b-slider') as HTMLInputElement;
+
 const inputArate = document.getElementById('A-rate') as HTMLInputElement;
 const inputBrate = document.getElementById('B-rate') as HTMLInputElement;
 const inputFeedrate = document.getElementById('feed-rate') as HTMLInputElement;
@@ -43,6 +94,7 @@ const attributeSetterPostAction = myWebglUtils.createAttributeSetters(gl, progra
 const ratio : number = gl.canvas.width / gl.canvas.height; 
 
 let isMouseDown = false;
+let isSettingsOpen = false;
 const pixelSize = 10;
 const pixelAmount = gl.canvas.width / pixelSize;
 
@@ -157,7 +209,76 @@ const planeUniforms : UniformData = {
     u_t: 1.0, // this one gets updated in the main loop
     u_laplacian : laplacianM,
     u_textureSize: [targetTextureWidth, targetTextureHeight],
+    u_colorB: [1,0,0],
+    u_colorA: [1,1,1],
+    u_color0: [1,0,1],
+    u_sharpnessA: 0.4,
+    u_sharpnessB: 0.1,
 };
+
+btnOpenSettings.onclick = () => {
+    isSettingsOpen = !isSettingsOpen;
+    mainScreen.classList.toggle('pushed');
+    sideContainer.classList.toggle('visible');
+    btnOpenSettings.textContent = isSettingsOpen ? "X" : "⚙";
+
+}
+
+
+dropboxParamPatterns.onchange = (object) => {
+    const target = object.target as HTMLInputElement;
+    changePattern(target);
+}
+dropboxParamPatterns.onclick = (object) => {
+    const target = object.target as HTMLInputElement;
+    changePattern(target);
+}
+
+function changePattern(target : HTMLInputElement) {
+
+    const currParams : number = parseInt(target.value);
+    console.log(currParams);
+
+    if(currParams >= PATTERNS.length) {
+        return;
+    }
+
+    planeUniforms.u_aRate = PATTERNS[currParams].aRate;
+    planeUniforms.u_bRate = PATTERNS[currParams].bRate;
+    planeUniforms.u_killRate = PATTERNS[currParams].killRate;
+    planeUniforms.u_feedRate = PATTERNS[currParams].feedRate;
+    planeUniforms.u_t = PATTERNS[currParams].deltaT;
+
+    inputArate.value = PATTERNS[currParams].aRate.toString();
+    inputBrate.value = PATTERNS[currParams].bRate.toString();
+    inputKillrate.value = PATTERNS[currParams].killRate.toString();
+    inputFeedrate.value = PATTERNS[currParams].feedRate.toString();
+    inputDeltaT.value = PATTERNS[currParams].deltaT.toString();
+}
+
+colorPickerB.oninput = (object) => {
+    const selectedColor = colorPickerB.value;
+
+
+    planeUniforms.u_colorB = hexToRgb(selectedColor);
+
+}
+
+colorPickerA.oninput = (object) => {
+    const selectedColor = colorPickerA.value;
+
+    planeUniforms.u_colorA = hexToRgb(selectedColor);
+    
+}
+
+colorPicker0.oninput = (object) => {
+
+    const selectedColor = colorPicker0.value;
+    console.log(selectedColor);
+    document.documentElement.style.setProperty('--accent-color', selectedColor);
+    document.documentElement.style.setProperty('--accent-color-hover', selectedColor);
+    planeUniforms.u_color0 = hexToRgb(selectedColor);
+}
 
 sliderSpeed.oninput = (event) => {
     const target = event.target as HTMLInputElement;
@@ -165,6 +286,19 @@ sliderSpeed.oninput = (event) => {
 
     simSteps = value;
 }
+
+sliderSharpA.oninput = (event) => {
+    const target = event.target as HTMLInputElement;
+    const value : number = parseFloat(target.value) / 100.0;
+    planeUniforms.u_sharpnessA = value;
+}
+
+sliderSharpB.oninput = (event) => {
+    const target = event.target as HTMLInputElement;
+    const value : number = parseFloat(target.value) / 100.0;
+    planeUniforms.u_sharpnessB = value;
+}
+
 inputArate.oninput = (event) => {
     const target = event.target as HTMLInputElement;
     const value : number = parseFloat(target.value);
@@ -210,23 +344,12 @@ inputInvert.oninput = (event) => {
 }
 btnReset.onclick = (event) => {
     resetCanvasAndTexture();
-    runningSim = false;
-    doSimStep = false;
 }
-btnStart.onclick = (event) => {
-    runningSim = true;
-    doSimStep = true;
-}
-btnPause.onclick = (event) => {
-    runningSim = false;
-    doSimStep = false;
-}
+
 resetCanvasAndTexture();
 
 let prevT = 0;
 let simSteps = 10;
-let runningSim : boolean = false;
-let doSimStep : boolean = false;
 
 function drawScene(time : number) {
 
@@ -433,6 +556,15 @@ function resizeCanvasToDisplaySize(canv : HTMLCanvasElement) : boolean
         projectionMatrix = myMath.ortographic(0, canv.width, canv.height, 0, 100, -100);
     }
     return resize;
+}
+
+function hexToRgb(hex : string) : [number,number,number] {
+  let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return result ? [
+    parseInt(result[1], 16) / 255.0,
+    parseInt(result[2], 16) / 255.0,
+    parseInt(result[3], 16) / 255.0
+ ] : [1,1,1];
 }
 
 

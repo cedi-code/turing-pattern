@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Slide and Right Panel</title>
+<style>
+  body {
+    margin: 0;
+    overflow: hidden;
+  }
+
+  /* Full-screen div */
+  .main-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: cornflowerblue;
+    transition: transform 0.5s ease;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+    z-index: 2;
+  }
+
+  /* Move it left to reveal panel */
+  .main-screen.pushed {
+    transform: translateX(-50%);
+  }
+
+  /* Button */
+  .toggle-btn {
+    margin: 20px;
+    padding: 10px 15px;
+    background: white;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 6px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+  }
+
+  /* Right-side panel */
+  .side-container {
+    position: fixed;
+    top: 0;
+    right: -50vw; /* Start off-screen */
+    width: 50vw;
+    height: 100vh;
+    background: lightcoral;
+    transition: right 0.5s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 2rem;
+    color: white;
+    z-index: 1;
+  }
+
+  /* Slide in */
+  .side-container.visible {
+    right: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="main-screen" id="mainScreen">
+  <button class="toggle-btn" id="toggleBtn">Toggle</button>
+</div>
+
+<div class="side-container" id="sideContainer">
+  Hello! I'm the right panel
+</div>
+
+<script>
+  const mainScreen = document.getElementById('mainScreen');
+  const sideContainer = document.getElementById('sideContainer');
+  const toggleBtn = document.getElementById('toggleBtn');
+
+  toggleBtn.addEventListener('click', () => {
+    mainScreen.classList.toggle('pushed');
+    sideContainer.classList.toggle('visible');
+  });
+</script>
+
+</body>
+</html>

@@ -2,47 +2,230 @@
 <head>
 <title>turing pattern</title>
 <style>
-	html, body {
-		height: 100%;
-		margin: 0;
-	}
-	#my_canvas {
-		width: 100vw;
-		height: 100vh;
-		display: block;
-	}
+:root {
+    --accent-color: #ff00ff;
+    --accent-color-hover: #ff0000;
+}
+
+html, body {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+}
+
+.main-screen {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    transition: transform 0.5s ease;
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-start;
+    z-index: 2;
+}
+
+.main-screen.pushed {
+    transform: translateX(-30%);
+}
+
+.toggle-btn {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 10px 15px;
+    background: rgba(0, 0, 0, 0.2);
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 6px;
+    color: white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    z-index: 3; /* Above the canvas */
+}
+.toggle-btn:hover {
+    background: rgba(0, 0, 0, 0.8);
+}
+
+.side-container {
+    position: fixed;
+    top: 0;
+    right: -30vw; /* Start off-screen */
+    width: 30vw;
+    height: 100vh;
+    background: rgb(26, 26, 26);
+    transition: right 0.5s ease;
+    z-index: 1;
+        overflow-y: auto;
+}
+
+.side-items {
+    display: flex;
+    justify-content: flex-start;
+    flex-direction: column;
+    align-items: start;
+    padding: 1vw;
+    overflow-y: auto;
+    font-size: 16px;
+    color: white;
+    overflow-y: auto;
+}
+
+.side-items button {
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 6px;
+    padding: 10px 15px;
+    color: white;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+    background: var(--accent-color);
+}
+
+.side-items p {
+    margin: 10px 0 0 0;
+}
+
+input[type=range] {
+    width: 100%;
+    accent-color: var(--accent-color); /* keeps fill green */
+    background: white; /* remove default bg so we see track styles */
+    height: 25px; /* thicker track */
+    cursor: pointer;
+}
+
+input[type=number] {
+    width: 70%;
+    color: white;
+    font-weight: bold;
+    font-size: 20px;
+    background: var(--accent-color);
+    height: 25px; /* thicker track */
+    cursor: pointer;
+}
+
+input:hover[type=range] {
+    accent-color: var(--accent-color-hover); /* hover green */
+    background: transparent;
+}
+
+input[type=checkbox] {
+    accent-color: var(--accent-color-hover);
+    transform: scale(2.0);
+    margin: 10px;
+}
+
+select {
+    background-color: var(--accent-color);
+    color: white;
+    font-weight: bold;
+    border: none;
+    padding: 8px 10px 8px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+option {
+    background-color: var(--accent-color-hover);
+    color: white;
+}
+
+.side-items button:hover {
+    background: var(--accent-color-hover);
+}
+
+.side-container.visible {
+    right: 0;
+}
+
+#my_canvas2 {
+    width: 100vw;
+    height: 100vh;
+    display: block;
+    position: fixed;
+    justify-content: center;
+    align-items: center;
+}
+h3, h1 {
+    margin: 10px 0 0 0;
+}
+
+hr {
+    width: 99%;
+    align-self: flex-start;
+    color: white;
+}
+
 </style>
 </head>
 <body>
 
-<canvas width="720" height="720" id="my_canvas"></canvas>
+<canvas width="720" height="720" class="main-screen" id="my_canvas"></canvas>
+<button class="toggle-btn" id="toggleBtn">&#9881;</button>
 
-<br>
-<button id="start-btn">start</button>
-<button id="pause-btn">pause</button>
-<button id="reset-btn">reset</button>
-<br>
+<div class="side-container" id="sideContainer">
+    <div class="side-items">
+                <hr>
+        <h1>Settings</h1>
+                <hr>
+        <p></p>
+        <button id="reset-btn">reset</button>
 
-<p>A-rate</p>
-<input type="number" step="0.1" value="1.0" min="0.0" max="2.0" id="A-rate">
+        <p>speed: <input type="range" class="slider" min="1" max="40" value="10" id="speed-slider"/> </p>
 
-<p>B-rate</p>
-<input type="number" step="0.1" value="0.5" min="0.0" max="2.0" id="B-rate">
+        <p>patterns        </p>
+        <select id="patterns-select">
+            <option value="0">default</option>
+            <option value="1">long</option>
+            <option value="2">bubbels</option>
+            <option value="3">lines</option>
+        </select>
 
-<p>feed-rate</p>
-<input type="number" step="0.01" value="0.055" min="0.0" max="1.0" id="feed-rate">
+        <p></p>
 
-<p>kill-rate</p>
-<input type="number" step="0.01" value="0.062" min="0.0" max="1.0" id="kill-rate">
+        <p style="margin-top: 0;">invert input</p>
+        <input type="checkbox" id="invert-check">
 
-<p>delta T</p>
-<input type="number" value="1.0" id="delta-t">
+        <h3>Apperance</h3>
+        <hr>
+        <p>color A:
+        </p>
+        <input type="color" id="color-A"  value="#FFFFFF">
+        <p>color B:
+        </p>
+        <input type="color" id="color-B"  value="#ff0000">
 
-<p>invert input</p>
-<input type="checkbox" id="invert-check">
+        <p>color 0:
+        </p>
+        <input type="color" id="color-0"  value="#ff00ff">
 
-<p>speed:</p>
-<input type="range" min="1" max="40" value="10" id="speed-slider"/>
+        <p>sharpness A
+        <input type="range" class="slider" min="0" max="50" value="40" id="sharp-a-slider"/>
+        </p>
+
+        <p>sharpness B
+        <input type="range" class="slider" min="0" max="50" value="10" id="sharp-b-slider"/>
+        </p>
+
+        <h3>Advanced </h3>
+                <hr>
+        <p>A-rate</p>
+        <input type="number" step="0.1" value="1.0" min="0.0" max="2.0" id="A-rate">
+        <p>B-rate</p>
+        <input type="number" step="0.1" value="0.5" min="0.0" max="2.0" id="B-rate">
+        <p>feed-rate</p>
+        <input type="number" step="0.01" value="0.055" min="0.0" max="1.0" id="feed-rate">
+        <p>kill-rate</p>
+        <input type="number" step="0.01" value="0.062" min="0.0" max="1.0" id="kill-rate">
+        <p>delta T</p>
+        <input type="number" value="1.0" id="delta-t">
+
+
+
+    </div>
+</div>
 
 <script  type="module" src="turingpattern.js"></script>
 </body>
+</html>
